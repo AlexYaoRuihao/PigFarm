@@ -18,6 +18,6 @@ DB_URI = "mysql+pymysql://{username}:{password}@{host}:{port}/{db}?charset=utf8"
 # db = SQLAlchemy(app)
 engine = create_engine(DB_URI)
 conn = engine.connect()
-result = conn.execute("select * from {rmb1};".format(rmb1=RMB1_TABLE))
+result = conn.execute("select pattern from {rmb1} ORDER BY RAND() LIMIT 1;".format(rmb1=RMB1_TABLE))
 print(result.fetchall())
 conn.close()
