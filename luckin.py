@@ -1,9 +1,13 @@
-from flask import Flask
+from flask import Flask, request
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine
 from .utils import json_response
+import json
 
 app = Flask(__name__)
+# INSERT  INTO `user`(`uid`,`info`) VALUES (1,'{\"mail\": \"jiangchengyao@gmail.com\", \"name\": \"David\", \"address\": \"Shangahai\"}'),(2,'{\"mail\": \"amy@gmail.com\", \"name\": \"Amy\"}');
+# SELECT uid,json_extract(info,'$.mail') AS 'mail',json_extract(info,'$.name') AS 'name' FROM USER;
+
 
 @app.before_request
 def before_request():
@@ -30,15 +34,37 @@ def before_request():
 # check validity of account token
 @app.route("/verification/account", methods = ["POST"])
 def verification(X_DEVICE_ID = None, X_APP_ID = None):
+    if X_APP_ID is None:
+        error = json.dumps({"error" : "Missing X-APP-ID!"})
+        return json_response(error, 401)
+    
+    data = request.json
+    if not all([data.get("user_id"), data.get("username"), data.get("last_login_date"), data.get("current_cash"), data.get("current_token")]):
+        error = json.dumps({"error" : "HTTPS request body imcomplete!"})
+        return json_response(error, 402)
+    
+    params = {
+        "user_id": data["user_id"],
+        "username": data["username"],
+        "last_login_date": data["last_login_date"],
+        "current_cash": data["current_cash"],
+        "current_token": data["current_token"]
+    }
 
-    pass
+    ground_truth_list = []
+    
+
+
+    
+    
+    raise NotImplementedError
 
 
 
 # 
 @app.route("/items/<int:id>")
 def items(id = None, X_APP_ID = None):
-    pass
+    raise NotImplementedError
 
 
 
