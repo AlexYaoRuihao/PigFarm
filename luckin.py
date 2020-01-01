@@ -51,12 +51,40 @@ def verification(X_DEVICE_ID = None, X_APP_ID = None):
         "current_token": data["current_token"]
     }
 
-    ground_truth_list = []
+    HOSTNAME = "rm-uf6ktwa39f10394a7no.mysql.rds.aliyuncs.com"
+    PORT = "3306"
+    DATABASE = "pigfarmdb"
+    USERNAME = "myadmin"
+    PASSWORD = "GGhavefun123"
+
+    DB_URI = "mysql+pymysql://{username}:{password}@{host}:{port}/{db}?charset=utf8".\
+    format(username=USERNAME,password=PASSWORD,host=HOSTNAME,port=PORT,db=DATABASE)
+
+    engine = create_engine(DB_URI)
+    conn = engine.connect()
+
+    # ground_truth_list = []
+    result = conn.execute("select username, current_cash, current_token from user where user_id={user_id};".format(user_id=params["user_id"]))
+    ground_truth_list = result.fetchall()
+    if ground_truth_list[0][0] != params["username"]:
+        error = json.dumps({"error" : "username incorrect!"})
+        return json_response(error, 403)
+    if ground_truth_list[0][1] != params["current_cash"]:
+        error = json.dumps({"error" : "current_cash incorrect!"})
+        return json_response(error, 403)
+    if ground_truth_list[0][2] != params["current_token"]:
+        error = json.dumps({"error" : "current_token incorrect!"})
+        return json_response(error, 403)
+
+    # then perform updates on last_login_date
+    result = conn.execute("select timestampdiff(second, user.last_login_date, CURRENT_TIMESTAMP) from user where user_id={user_id};".format(user_id=params["user_id"]))
+    last_login_date_list = result.fetchall()
     
 
 
     
-    
+
+    conn.close()
     raise NotImplementedError
 
 
