@@ -1,7 +1,7 @@
 from flask import Flask, request
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine
-from .utils import json_response
+from utils import json_response, check_3dup
 import json
 
 app = Flask(__name__)
@@ -104,6 +104,12 @@ def items(id = None, X_APP_ID = None):
     if X_APP_ID is None:
         error = json.dumps({"error" : "Missing X-APP-ID!"})
         return json_response(error, 401)
+     # pre-calculate a day's profits if possible
+
+
+
+
+
     
 
 
