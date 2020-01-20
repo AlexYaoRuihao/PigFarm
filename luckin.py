@@ -104,8 +104,31 @@ def items(id = None, X_APP_ID = None):
     if X_APP_ID is None:
         error = json.dumps({"error" : "Missing X-APP-ID!"})
         return json_response(error, 401)
-     # pre-calculate a day's profits if possible
+    # pre-calculate a day's profits if possible
+    # perform sanity checks first
+    try:
+        HOSTNAME = "rm-uf6ktwa39f10394a7no.mysql.rds.aliyuncs.com"
+        PORT = "3306"
+        DATABASE = "pigfarmdb"
+        USERNAME = "myadmin"
+        PASSWORD = "GGhavefun123"
 
+        DB_URI = "mysql+pymysql://{username}:{password}@{host}:{port}/{db}?charset=utf8".\
+        format(username=USERNAME,password=PASSWORD,host=HOSTNAME,port=PORT,db=DATABASE)
+
+        engine = create_engine(DB_URI)
+        conn = engine.connect()
+
+        result = conn.execute("select user_id_hash, current_cash, current_token from user where user_id_hash={user_id_hash};".format(user_id_hash=str(id)))
+
+
+
+
+
+    except Exception as e:
+        conn.close()
+        error = json.dumps({"error" : e})
+        return json_response(error, 403)
 
 
 

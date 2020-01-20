@@ -1,5 +1,11 @@
 from flask import make_response
 import re
+import hashlib
+from flask import Flask, request
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import create_engine
+# from utils import json_response, check_3dup
+import json
 
 JSON_MIME_TYPE = 'application/json'
 theme_dict = {
@@ -70,3 +76,33 @@ def check_3dup(s):
         if char_count >= 3:
             return True
     return False
+
+def get_sha256_hash(s):
+    return hashlib.sha256((s).encode("utf-8")).hexdigest()
+
+
+# update user set `day_theme_list` = '{\"0\": \"Airport\", \"1\": \"Bus_Stop\", \"2\": \"Casino\"}' where `user_id` = 1;
+def build_queries_from_dict(user_id_hash, d, query_type):
+    if query_type == "SELECT":
+        query = "select user_id_hash, day_theme_list from user where user_id_hash={user_id_hash}".format(user_id_hash = user_id_hash)
+        return query
+    elif query_type == "INSERT":
+        # json_theme_list = []
+        # for k, v in d.items():
+        #     json_theme_list.append("\\\"" + k + "\\\"" + " : " + "\\\"" + v + "\\\"")
+        # json_theme_list_query = ",".join(json_theme_list)
+        # query = "insert into user day_theme_list = '{" + json_theme_list_query + "}' " + "where user_id_hash={user_id_hash}".format(user_id_hash = user_id_hash)
+        # return query
+        pass
+    elif query_type == "UPDATE":
+        json_theme_list = []
+        for k, v in d.items():
+            json_theme_list.append("\\\"" + k + "\\\"" + " : " + "\\\"" + v + "\\\"")
+        json_theme_list_query = ",".join(json_theme_list)
+        query = "update user set day_theme_list = '{" + json_theme_list_query + "}' " + "where user_id_hash={user_id_hash}".format(user_id_hash = user_id_hash)
+        return query
+    else:
+        raise ValueError("{query_type} not implemented!".format(query_type=query_type))
+
+def calculate_rewards(d):
+    pass
