@@ -175,3 +175,13 @@ def generate_day_theme_list(day_theme_num=25):
             day_theme_list[day_theme_idx_hash] = str(theme_num)+"|"+cash_or_token+"|"+str(table_num)+"|"+pattern+"|"+extra_token_pattern 
     conn.close()
     return day_theme_list
+
+def transform_into_listofdict(d):
+    day_theme_list_of_dict = []
+    for k, v in d.items():
+        temp_dict = {}
+        decoded_data = v.split("|")
+        temp_dict["theme"] = theme_dict[int(decoded_data[0])]
+        temp_dict["pattern"] = decoded_data[3]
+        day_theme_list_of_dict.append(temp_dict)
+    return day_theme_list_of_dict

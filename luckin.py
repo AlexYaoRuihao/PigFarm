@@ -1,7 +1,7 @@
 from flask import Flask, request
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine
-from utils import json_response, check_3dup
+from utils import json_response, check_3dup, generate_day_theme_list, build_queries_from_dict, transform_into_listofdict
 import json
 
 app = Flask(__name__)
@@ -119,8 +119,14 @@ def items(id = None, X_APP_ID = None):
         engine = create_engine(DB_URI)
         conn = engine.connect()
 
-        result = conn.execute("select user_id_hash, current_cash, current_token from user where user_id_hash={user_id_hash};".format(user_id_hash=str(id)))
+        # result = conn.execute("select user_id_hash, current_cash, current_token from user where user_id_hash={user_id_hash};".format(user_id_hash=str(id)))
+        day_theme_list = generate_day_theme_list()
+        query = build_queries_from_dict(id, day_theme_list, "UPDATE")
+        #perform updates on user's day_theme_list field
+        conn.execute(query)
+        conn.close()
 
+        return json_response(json.dumps(transform_into_listofdict(day_theme_list)), 200)
 
 
 
@@ -130,6 +136,20 @@ def items(id = None, X_APP_ID = None):
         error = json.dumps({"error" : e})
         return json_response(error, 403)
 
+
+@app.route("/items/<int:id1>/item/<int:id2>")
+def get_items(id1 = None, id2 = None, X_APP_ID = None):
+    if id1 is None:
+        error = json.dumps({"error" : "Non existing id!"})
+        return json_response(error, 400)
+    if id2 is None:
+        error = json.dumps({"error" : "Non existing id!"})
+        return json_response(error, 400)
+    if X_APP_ID is None:
+        error = json.dumps({"error" : "Missing X-APP-ID!"})
+        return json_response(error, 401)
+    
+    
 
 
 
