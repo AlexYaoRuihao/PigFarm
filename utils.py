@@ -125,9 +125,10 @@ def build_queries_from_dict(user_id_hash, d, query_type):
     elif query_type == "UPDATE":
         json_theme_list = []
         for k, v in d.items():
-            json_theme_list.append("\\\"" + k + "\\\"" + " : " + "\\\"" + v + "\\\"")
+            json_theme_list.append("\"" + str(k) + "\"" + " : " + "\"" + str(v) + "\"")
+            # json_theme_list.append(str(k) + ":" + str(v))
         json_theme_list_query = ",".join(json_theme_list)
-        query = "update user set day_theme_list = '{" + json_theme_list_query + "}' " + "where user_id_hash={user_id_hash}".format(user_id_hash = user_id_hash)
+        query = "update user set day_theme_list = '{" + json_theme_list_query + "}'" + "where user_id_hash={user_id_hash}".format(user_id_hash = user_id_hash)
         return query
     else:
         raise ValueError("{query_type} not implemented!".format(query_type=query_type))

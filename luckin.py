@@ -148,16 +148,41 @@ def get_items(id1 = None, id2 = None, X_APP_ID = None):
     if X_APP_ID is None:
         error = json.dumps({"error" : "Missing X-APP-ID!"})
         return json_response(error, 401)
+
+    try:
+        return_dict = {}
+        id1_str = str(id1)
+        id2_str = str(id2)
+        HOSTNAME = "rm-uf6ktwa39f10394a7no.mysql.rds.aliyuncs.com"
+        PORT = "3306"
+        DATABASE = "pigfarmdb"
+        USERNAME = "myadmin"
+        PASSWORD = "GGhavefun123"
+
+        DB_URI = "mysql+pymysql://{username}:{password}@{host}:{port}/{db}?charset=utf8".\
+            format(username=USERNAME,password=PASSWORD,host=HOSTNAME,port=PORT,db=DATABASE)
+
+        engine = create_engine(DB_URI)
+        conn = engine.connect()
+        result = conn.execute("select user_id, day_theme_list from user where user_id_hash={user_id_hash}".format(user_id_hash = id1_str))
+        day_theme_dict = json.loads(result.fetchall()[0][1])
+        encoded_str = day_theme_dict[id2_str]
+        encoded_str_list = encoded_str.split("|")
+        return_dict["bonus"] = int(encoded_str_list[4])
+        return_dict["order"] = [int(encoded_str_list[3][0]), int(encoded_str_list[3][1]), int(encoded_str_list[3][2]), int(encoded_str_list[3][3]), int(encoded_str_list[3][4]), int(encoded_str_list[3][5])]
+
+        conn.close()
+        return json_response(json.dumps(return_dict), 200)
+
     
-    
+    except Exception as e:
+        conn.close()
+        error = json.dumps({"error" : e})
+        return json_response(error, 403)
 
 
 
     
-
-
-
-
 if __name__ == "__main__":
     app.debug = True
     app.run(host="0.0.0.0", port="8080", ssl_context = ("SSL_Certificate.key","SSL_Certificate.pem"))
