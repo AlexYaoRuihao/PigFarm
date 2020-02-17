@@ -11,21 +11,22 @@ app = Flask(__name__)
 
 @app.before_request
 def before_request():
-    HOSTNAME = "rm-uf6ktwa39f10394a7no.mysql.rds.aliyuncs.com"
-    PORT = "3306"
-    DATABASE = "pigfarmdb"
-    USERNAME = "myadmin"
-    PASSWORD = "GGhavefun123"
-    RMB1_TABLE = "rmb1table"
+    # HOSTNAME = "rm-uf6ktwa39f10394a7no.mysql.rds.aliyuncs.com"
+    # PORT = "3306"
+    # DATABASE = "pigfarmdb"
+    # USERNAME = "myadmin"
+    # PASSWORD = "GGhavefun123"
+    # RMB1_TABLE = "rmb1table"
 
-    DB_URI = "mysql+pymysql://{username}:{password}@{host}:{port}/{db}?charset=utf8".\
-        format(username=USERNAME,password=PASSWORD,host=HOSTNAME,port=PORT,db=DATABASE)
+    # DB_URI = "mysql+pymysql://{username}:{password}@{host}:{port}/{db}?charset=utf8".\
+    #     format(username=USERNAME,password=PASSWORD,host=HOSTNAME,port=PORT,db=DATABASE)
 
-    engine = create_engine(DB_URI)
-    conn = engine.connect()
-    result = conn.execute("select pattern from {rmb1} ORDER BY RAND() LIMIT 1;".format(rmb1=RMB1_TABLE))
-    print(result.fetchall())
-    conn.close()
+    # engine = create_engine(DB_URI)
+    # conn = engine.connect()
+    # result = conn.execute("select pattern from {rmb1} ORDER BY RAND() LIMIT 1;".format(rmb1=RMB1_TABLE))
+    # print(result.fetchall())
+    # conn.close()
+    pass
 
 
 
@@ -179,6 +180,46 @@ def get_items(id1 = None, id2 = None, X_APP_ID = None):
         conn.close()
         error = json.dumps({"error" : e})
         return json_response(error, 403)
+
+
+@app.route("/items/<int:id1>/item/<int:id2>", methods = ["POST"])
+def get_items(id1 = None, id2 = None, X_APP_ID = None):
+    if id1 is None:
+        error = json.dumps({"error" : "Non existing id!"})
+        return json_response(error, 400)
+    if id2 is None:
+        error = json.dumps({"error" : "Non existing id!"})
+        return json_response(error, 400)
+    if X_APP_ID is None:
+        error = json.dumps({"error" : "Missing X-APP-ID!"})
+        return json_response(error, 401)
+
+    try:
+        id1_str = str(id1)
+        id2_str = str(id2)
+        HOSTNAME = "rm-uf6ktwa39f10394a7no.mysql.rds.aliyuncs.com"
+        PORT = "3306"
+        DATABASE = "pigfarmdb"
+        USERNAME = "myadmin"
+        PASSWORD = "GGhavefun123"
+
+        DB_URI = "mysql+pymysql://{username}:{password}@{host}:{port}/{db}?charset=utf8".\
+            format(username=USERNAME,password=PASSWORD,host=HOSTNAME,port=PORT,db=DATABASE)
+
+        engine = create_engine(DB_URI)
+        conn = engine.connect()
+        result = conn.execute("select day_theme_list from user where user_id_hash = {user_id_hash};".format(user_id_hash=id1_str))
+
+        day_theme_list = result.fetchall[0][0]
+        
+
+        
+        conn.close()
+    except Exception as e:
+        conn.close()
+        error = json.dumps({"error" : e})
+        return json_response(error, 403)
+
 
 
 
