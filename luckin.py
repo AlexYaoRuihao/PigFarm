@@ -2,6 +2,7 @@ from flask import Flask, request
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine
 from utils import json_response, check_3dup, generate_day_theme_list, build_queries_from_dict, transform_into_listofdict
+from utils import theme_dict, rmb_table_dict, token_table_dict
 import json
 
 app = Flask(__name__)
@@ -211,10 +212,38 @@ def get_items(id1 = None, id2 = None, X_APP_ID = None):
         result = conn.execute("select day_theme_list from user where user_id_hash = {user_id_hash};".format(user_id_hash=id1_str))
 
         day_theme_list = result.fetchall[0][0]
-        
+        day_theme_list_dict = json.loads(day_theme_list)
 
+        info_str = day_theme_list_dict[id2_str]
+        info_str_l = info_str.split("|")
+        rmb_or_token = info_str_l[1]
+        if rmb_or_token == "r":
+            reward = rmb_table_dict[int(info_str_l[2])]
+        else:
+            reward = token_table_dict[int(info_str_l[2])]
         
+        three_dup = check_3dup(info_str_l[3])
+
+        extra_tokens = info_str_l[4]
+
+        day_theme_list_dict.pop(id2_str)
+        day_theme_list_dict_str = json.dumps(day_theme_list_dict)
+        conn.execute("update user set day_theme_list = {var1} where user_id_hash={user_id_hash}".format(var1=day_theme_list_dict_str, user_id_hash=id1_str))
+        if three_dup == False:
+            # day_theme_list_dict.pop(id2_str)
+            # day_theme_list_dict_str = json.dumps(day_theme_list_dict)
+            # conn.execute("update user set day_theme_list = {var1} where user_id_hash={user_id_hash}".format(var1=day_theme_list_dict_str, user_id_hash=id1_str))
+            pass
+        else: # True
+            if rmb_or_token == "r":
+                conn.execute("update user set current_cash = current_cash + {var2} where user_id_hash={user_id_hash}".format(var2=reward, user_id_hash=id1_str))
+            else:
+                conn.execute("update user set current_token = current_token + {var2} where user_id_hash={user_id_hash}".format(var2=reward, user_id_hash=id1_str))
+
+        # update extra tokens
+        conn.execute("update user set current_token = current_token + {var3} where user_id_hash={user_id_hash}".format(var3=extra_tokens, user_id_hash=id1_str))
         conn.close()
+        return json_response()
     except Exception as e:
         conn.close()
         error = json.dumps({"error" : e})
