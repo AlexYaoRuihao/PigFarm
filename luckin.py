@@ -35,18 +35,28 @@ def before_request():
 
 # check validity of account token
 @app.route("/verification/account", methods = ["POST"])
-def verification(X_DEVICE_ID = None, X_APP_ID = None):
+# def verification(X_DEVICE_ID = None, X_APP_ID = None):
+def verification():
+    # if X_APP_ID is None:
+    #     error = json.dumps({"error" : "Missing X-APP-ID!"})
+    #     return json_response(error, 401)
+    X_APP_ID = request.headers["X_APP_ID"]
     if X_APP_ID is None:
         error = json.dumps({"error" : "Missing X-APP-ID!"})
         return json_response(error, 401)
+
     
-    data = request.json
-    if not all([data.get("user_id"), data.get("username"), data.get("last_login_date"), data.get("current_cash"), data.get("current_token")]):
+    data = request.form
+    try:
+        b = all([data.get("user_id_hash"), data.get("username"), data.get("last_login_date"), data.get("current_cash"), data.get("current_token")])
+    except Exception as e:
+        # print(e)
         error = json.dumps({"error" : "HTTPS request body imcomplete!"})
         return json_response(error, 402)
     
+    # print("user_id_hash", data["user_id_hash"])
     params = {
-        "user_id": data["user_id"],
+        "user_id_hash": data["user_id_hash"],
         "username": data["username"],
         "last_login_date": data["last_login_date"],
         "current_cash": data["current_cash"],
@@ -66,30 +76,33 @@ def verification(X_DEVICE_ID = None, X_APP_ID = None):
         conn = engine.connect()
 
         # ground_truth_list = []
-        result = conn.execute("select username, current_cash, current_token from user where user_id={user_id};".format(user_id=params["user_id"]))
+        # print("select username, current_cash, current_token from user where user_id_hash={user_id_hash};".format(user_id_hash=params["user_id_hash"]))
+        result = conn.execute("select username, current_cash, current_token from user where user_id_hash=\"{user_id_hash}\";".format(user_id_hash=params["user_id_hash"]))
         ground_truth_list = result.fetchall()
         if ground_truth_list[0][0] != params["username"]:
             error = json.dumps({"error" : "username mismatch!"})
             return json_response(error, 403)
-        if ground_truth_list[0][1] != params["current_cash"]:
+        if str(ground_truth_list[0][1]) != params["current_cash"]:
             error = json.dumps({"error" : "current_cash mismatch!"})
             return json_response(error, 403)
-        if ground_truth_list[0][2] != params["current_token"]:
+        if str(ground_truth_list[0][2]) != params["current_token"]:
             error = json.dumps({"error" : "current_token mismatch!"})
             return json_response(error, 403)
 
         # then perform updates on last_login_date
-        result = conn.execute("select timestampdiff(second, user.last_login_date, CURRENT_TIMESTAMP) from user where user_id={user_id};".format(user_id=params["user_id"]))
+        result = conn.execute("select timestampdiff(second, user.last_login_date, CURRENT_TIMESTAMP) from user where user_id_hash=\"{user_id_hash}\";".format(user_id_hash=params["user_id_hash"]))
         timediff = result.fetchall()
         timediff = timediff[0][0]
+        print("type(timediff)",type(timediff))
         if timediff > 86400: # exceed one day
-            result = conn.execute("update user set last_login_date = CURRENT_TIMESTAMP where user_id={user_id};".format(user_id=params["user_id"]))
+            result = conn.execute("update user set last_login_date = CURRENT_TIMESTAMP where user_id_hash=\"{user_id_hash}\";".format(user_id_hash=params["user_id_hash"]))
         else: # doesn't exceed one day
             pass
-        current_last_login_date = conn.execute("select last_login_date from user where user_id={user_id};".format(user_id=params["user_id"]))
-        current_last_login_date = current_last_login_date[0][0]
+        current_last_login_date = conn.execute("select last_login_date from user where user_id_hash=\"{user_id_hash}\";".format(user_id_hash=params["user_id_hash"]))
+        # print("fefeffefe",current_last_login_date[0])
+        current_last_login_date = current_last_login_date.fetchall()[0][0]
         conn.close()
-        return json_response(json.dumps({"user_id" : params["user_id"], "last_login_date" : current_last_login_date}), 200)
+        return json_response(json.dumps({"user_id_hash" : params["user_id_hash"], "last_login_date" : str(current_last_login_date)}), 200)
     except Exception as e:
         conn.close()
         error = json.dumps({"error" : e})
@@ -184,7 +197,7 @@ def get_items(id1 = None, id2 = None, X_APP_ID = None):
 
 
 @app.route("/items/<int:id1>/item/<int:id2>", methods = ["POST"])
-def get_items(id1 = None, id2 = None, X_APP_ID = None):
+def get_items_post(id1 = None, id2 = None, X_APP_ID = None):
     if id1 is None:
         error = json.dumps({"error" : "Non existing id!"})
         return json_response(error, 400)
