@@ -111,14 +111,18 @@ def verification():
 
 
 # 
-@app.route("/items/<int:id>")
-def items(id = None, X_APP_ID = None):
+@app.route("/items/<string:id>")
+def items(id = None):
     if id is None:
         error = json.dumps({"error" : "Non existing id!"})
         return json_response(error, 400)
+
+    X_APP_ID = request.headers["X_APP_ID"]
     if X_APP_ID is None:
         error = json.dumps({"error" : "Missing X-APP-ID!"})
         return json_response(error, 401)
+
+    
     # pre-calculate a day's profits if possible
     # perform sanity checks first
     try:
@@ -152,14 +156,16 @@ def items(id = None, X_APP_ID = None):
         return json_response(error, 403)
 
 
-@app.route("/items/<int:id1>/item/<int:id2>")
-def get_items(id1 = None, id2 = None, X_APP_ID = None):
+@app.route("/items/<string:id1>/item/<string:id2>")
+def get_items(id1 = None, id2 = None):
     if id1 is None:
         error = json.dumps({"error" : "Non existing id!"})
         return json_response(error, 400)
     if id2 is None:
         error = json.dumps({"error" : "Non existing id!"})
         return json_response(error, 400)
+    
+    X_APP_ID = request.headers["X_APP_ID"]
     if X_APP_ID is None:
         error = json.dumps({"error" : "Missing X-APP-ID!"})
         return json_response(error, 401)
@@ -179,7 +185,7 @@ def get_items(id1 = None, id2 = None, X_APP_ID = None):
 
         engine = create_engine(DB_URI)
         conn = engine.connect()
-        result = conn.execute("select user_id, day_theme_list from user where user_id_hash={user_id_hash}".format(user_id_hash = id1_str))
+        result = conn.execute("select user_id, day_theme_list from user where user_id_hash=\"{user_id_hash}\";".format(user_id_hash = id1_str))
         day_theme_dict = json.loads(result.fetchall()[0][1])
         encoded_str = day_theme_dict[id2_str]
         encoded_str_list = encoded_str.split("|")
@@ -196,14 +202,17 @@ def get_items(id1 = None, id2 = None, X_APP_ID = None):
         return json_response(error, 403)
 
 
-@app.route("/items/<int:id1>/item/<int:id2>", methods = ["POST"])
-def get_items_post(id1 = None, id2 = None, X_APP_ID = None):
+@app.route("/items/<string:id1>/item/<string:id2>", methods = ["POST"])
+def get_items_post(id1 = None, id2 = None):
     if id1 is None:
         error = json.dumps({"error" : "Non existing id!"})
         return json_response(error, 400)
     if id2 is None:
         error = json.dumps({"error" : "Non existing id!"})
         return json_response(error, 400)
+    
+
+    X_APP_ID = request.headers["X_APP_ID"]
     if X_APP_ID is None:
         error = json.dumps({"error" : "Missing X-APP-ID!"})
         return json_response(error, 401)
@@ -222,9 +231,9 @@ def get_items_post(id1 = None, id2 = None, X_APP_ID = None):
 
         engine = create_engine(DB_URI)
         conn = engine.connect()
-        result = conn.execute("select day_theme_list from user where user_id_hash = {user_id_hash};".format(user_id_hash=id1_str))
+        result = conn.execute("select day_theme_list from user where user_id_hash = \"{user_id_hash}\";".format(user_id_hash=id1_str))
 
-        day_theme_list = result.fetchall[0][0]
+        day_theme_list = result.fetchall()[0][0]
         day_theme_list_dict = json.loads(day_theme_list)
 
         info_str = day_theme_list_dict[id2_str]
@@ -241,7 +250,7 @@ def get_items_post(id1 = None, id2 = None, X_APP_ID = None):
 
         day_theme_list_dict.pop(id2_str)
         day_theme_list_dict_str = json.dumps(day_theme_list_dict)
-        conn.execute("update user set day_theme_list = {var1} where user_id_hash={user_id_hash}".format(var1=day_theme_list_dict_str, user_id_hash=id1_str))
+        conn.execute("update user set day_theme_list = '{var1}' where user_id_hash=\"{user_id_hash}\";".format(var1=day_theme_list_dict_str, user_id_hash=id1_str))
         if three_dup == False:
             # day_theme_list_dict.pop(id2_str)
             # day_theme_list_dict_str = json.dumps(day_theme_list_dict)
@@ -249,12 +258,12 @@ def get_items_post(id1 = None, id2 = None, X_APP_ID = None):
             pass
         else: # True
             if rmb_or_token == "r":
-                conn.execute("update user set current_cash = current_cash + {var2} where user_id_hash={user_id_hash}".format(var2=reward, user_id_hash=id1_str))
+                conn.execute("update user set current_cash = current_cash + {var2} where user_id_hash=\"{user_id_hash}\";".format(var2=reward, user_id_hash=id1_str))
             else:
-                conn.execute("update user set current_token = current_token + {var2} where user_id_hash={user_id_hash}".format(var2=reward, user_id_hash=id1_str))
+                conn.execute("update user set current_token = current_token + {var2} where user_id_hash=\"{user_id_hash}\";".format(var2=reward, user_id_hash=id1_str))
 
         # update extra tokens
-        conn.execute("update user set current_token = current_token + {var3} where user_id_hash={user_id_hash}".format(var3=extra_tokens, user_id_hash=id1_str))
+        conn.execute("update user set current_token = current_token + {var3} where user_id_hash=\"{user_id_hash}\";".format(var3=extra_tokens, user_id_hash=id1_str))
         conn.close()
         return json_response()
     except Exception as e:
