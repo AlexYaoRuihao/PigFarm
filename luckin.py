@@ -2,7 +2,7 @@ from flask import Flask, request
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine
 from utils import json_response, check_3dup, generate_day_theme_list, build_queries_from_dict, transform_into_listofdict
-from utils import theme_dict, rmb_table_dict, token_table_dict
+from utils import theme_dict, rmb_table_dict, token_table_dict, ip2int, int2ip, get_sha256_hash
 import json
 
 app = Flask(__name__)
@@ -30,6 +30,122 @@ def before_request():
     pass
 
 
+@app.route("/login", methods = ["POST"])
+def login():
+    X_APP_ID = request.headers["X_APP_ID"]
+    if X_APP_ID is None:
+        error = json.dumps({"error" : "Missing X-APP-ID!"})
+        return json_response(error, 401)
+    
+    X_DEVICE_ID = request.headers["X_DEVICE_ID"]
+    if X_DEVICE_ID is None:
+        error = json.dumps({"error" : "Missing X-DEVICE-ID!"})
+        return json_response(error, 401)
+    
+    data = request.form
+    try:
+        b = all([data.get("username"), data.get("password")])
+    except Exception as e:
+        # print(e)
+        error = json.dumps({"error" : "HTTPS request body imcomplete!"})
+        return json_response(error, 402)
+
+    params = {
+        "username": data["username"],
+        "password": data["password"]
+    }
+
+    try:
+        HOSTNAME = "rm-uf6ktwa39f10394a7no.mysql.rds.aliyuncs.com"
+        PORT = "3306"
+        DATABASE = "pigfarmdb"
+        USERNAME = "myadmin"
+        PASSWORD = "GGhavefun123"
+
+        DB_URI = "mysql+pymysql://{username}:{password}@{host}:{port}/{db}?charset=utf8".\
+        format(username=USERNAME,password=PASSWORD,host=HOSTNAME,port=PORT,db=DATABASE)
+
+        engine = create_engine(DB_URI)
+        conn = engine.connect()
+
+        result = conn.execute("select password from user where username=\"{var1}\";".format(var1=params["username"]))
+        user_password = result.fetchone()[0]
+
+
+
+        conn.close()
+        return json_response()
+    except Exception as e:
+        conn.close()
+        error = json.dumps({"error" : e})
+        return json_response(error, 403)
+
+
+
+
+    
+
+
+@app.route("/register", methods = ["POST"])
+def register():
+    X_APP_ID = request.headers["X_APP_ID"]
+    if X_APP_ID is None:
+        error = json.dumps({"error" : "Missing X-APP-ID!"})
+        return json_response(error, 401)
+    
+    X_DEVICE_ID = request.headers["X_DEVICE_ID"]
+    if X_DEVICE_ID is None:
+        error = json.dumps({"error" : "Missing X-DEVICE-ID!"})
+        return json_response(error, 401)
+
+    data = request.form
+    try:
+        b = all([data.get("username"), data.get("password"), data.get("phone"), data.get("email"), data.get("WeChatID")])
+    except Exception as e:
+        # print(e)
+        error = json.dumps({"error" : "HTTPS request body imcomplete!"})
+        return json_response(error, 402)
+
+    params = {
+        "username": data["username"],
+        "password": data["password"],
+        "phone": data["phone"],
+        "email": data["email"],
+        "WeChatID": data["WeChatID"]
+    }
+
+    IP_addr = request.remote_addr
+    IP_addr_int = ip2int(IP_addr)
+
+    try:
+        HOSTNAME = "rm-uf6ktwa39f10394a7no.mysql.rds.aliyuncs.com"
+        PORT = "3306"
+        DATABASE = "pigfarmdb"
+        USERNAME = "myadmin"
+        PASSWORD = "GGhavefun123"
+
+        DB_URI = "mysql+pymysql://{username}:{password}@{host}:{port}/{db}?charset=utf8".\
+        format(username=USERNAME,password=PASSWORD,host=HOSTNAME,port=PORT,db=DATABASE)
+
+        engine = create_engine(DB_URI)
+        conn = engine.connect()
+
+        conn.execute("insert into user(username, password, email, phone, WeChatID, registered_IP) VALUES(\"{username}\", \"{password}\", \"{email}\", {phone}, \"{WeChatID}\", {registered_IP});"\
+            .format(username=params["username"], password=params["password"], email=params["email"], phone=params["phone"], WeChatID=params["WeChatID"], registered_IP=IP_addr_int))
+
+        result = conn.execute("select user_id from user where username=\"{var1}\";".format(var1=params["username"]))
+        user_id = result.fetchone()[0]
+
+        user_id_hash = get_sha256_hash(str(user_id))
+
+        conn.execute("update user set user_id_hash = \"{var2}\" where username = \"{var3}\";".format(var2=user_id_hash, var3=params["username"]))
+
+        conn.close()
+        return json_response()
+    except Exception as e:
+        conn.close()
+        error = json.dumps({"error" : e})
+        return json_response(error, 403)
 
 
 
@@ -43,6 +159,11 @@ def verification():
     X_APP_ID = request.headers["X_APP_ID"]
     if X_APP_ID is None:
         error = json.dumps({"error" : "Missing X-APP-ID!"})
+        return json_response(error, 401)
+    
+    X_DEVICE_ID = request.headers["X_DEVICE_ID"]
+    if X_DEVICE_ID is None:
+        error = json.dumps({"error" : "Missing X-DEVICE-ID!"})
         return json_response(error, 401)
 
     

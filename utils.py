@@ -6,6 +6,8 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine
 # from utils import json_response, check_3dup
 import json, random
+import socket
+import struct
 
 JSON_MIME_TYPE = 'application/json'
 theme_dict = {
@@ -186,3 +188,11 @@ def transform_into_listofdict(d):
         temp_dict["pattern"] = decoded_data[3]
         day_theme_list_of_dict.append(temp_dict)
     return day_theme_list_of_dict
+
+
+def ip2int(addr):
+    return struct.unpack("!I", socket.inet_aton(addr))[0]
+
+
+def int2ip(addr):
+    return socket.inet_ntoa(struct.pack("!I", addr))
