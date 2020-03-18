@@ -89,12 +89,12 @@ def login():
 @app.route("/register", methods = ["POST"])
 def register():
     print("request.headers",request.headers)
-    X_APP_ID = request.headers["X_APP_ID"]
+    X_APP_ID = request.headers["X-App-Id"]
     if X_APP_ID is None:
         error = json.dumps({"error" : "Missing X-APP-ID!"})
         return json_response(error, 401)
     
-    X_DEVICE_ID = request.headers["X_DEVICE_ID"]
+    X_DEVICE_ID = request.headers["X-Device-Id"]
     if X_DEVICE_ID is None:
         error = json.dumps({"error" : "Missing X-DEVICE-ID!"})
         return json_response(error, 401)
