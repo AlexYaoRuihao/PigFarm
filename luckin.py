@@ -88,6 +88,7 @@ def login():
 
 @app.route("/register", methods = ["POST"])
 def register():
+    print("request.headers",request.headers)
     X_APP_ID = request.headers["X_APP_ID"]
     if X_APP_ID is None:
         error = json.dumps({"error" : "Missing X-APP-ID!"})
