@@ -32,12 +32,12 @@ def before_request():
 
 @app.route("/login", methods = ["POST"])
 def login():
-    X_APP_ID = request.headers["X_APP_ID"]
+    X_APP_ID = request.headers["X-App-Id"]
     if X_APP_ID is None:
         error = json.dumps({"error" : "Missing X-APP-ID!"})
         return json_response(error, 401)
     
-    X_DEVICE_ID = request.headers["X_DEVICE_ID"]
+    X_DEVICE_ID = request.headers["X-Device-Id"]
     if X_DEVICE_ID is None:
         error = json.dumps({"error" : "Missing X-DEVICE-ID!"})
         return json_response(error, 401)
@@ -157,12 +157,12 @@ def verification():
     # if X_APP_ID is None:
     #     error = json.dumps({"error" : "Missing X-APP-ID!"})
     #     return json_response(error, 401)
-    X_APP_ID = request.headers["X_APP_ID"]
+    X_APP_ID = request.headers["X-App-Id"]
     if X_APP_ID is None:
         error = json.dumps({"error" : "Missing X-APP-ID!"})
         return json_response(error, 401)
     
-    X_DEVICE_ID = request.headers["X_DEVICE_ID"]
+    X_DEVICE_ID = request.headers["X-Device-Id"]
     if X_DEVICE_ID is None:
         error = json.dumps({"error" : "Missing X-DEVICE-ID!"})
         return json_response(error, 401)
@@ -239,7 +239,7 @@ def items(id = None):
         error = json.dumps({"error" : "Non existing id!"})
         return json_response(error, 400)
 
-    X_APP_ID = request.headers["X_APP_ID"]
+    X_APP_ID = request.headers["X-App-Id"]
     if X_APP_ID is None:
         error = json.dumps({"error" : "Missing X-APP-ID!"})
         return json_response(error, 401)
@@ -287,7 +287,7 @@ def get_items(id1 = None, id2 = None):
         error = json.dumps({"error" : "Non existing id!"})
         return json_response(error, 400)
     
-    X_APP_ID = request.headers["X_APP_ID"]
+    X_APP_ID = request.headers["X-App-Id"]
     if X_APP_ID is None:
         error = json.dumps({"error" : "Missing X-APP-ID!"})
         return json_response(error, 401)
@@ -334,7 +334,7 @@ def get_items_post(id1 = None, id2 = None):
         return json_response(error, 400)
     
 
-    X_APP_ID = request.headers["X_APP_ID"]
+    X_APP_ID = request.headers["X-App-Id"]
     if X_APP_ID is None:
         error = json.dumps({"error" : "Missing X-APP-ID!"})
         return json_response(error, 401)
