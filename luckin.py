@@ -4,10 +4,15 @@ from sqlalchemy import create_engine
 from utils import json_response, check_3dup, generate_day_theme_list, build_queries_from_dict, transform_into_listofdict
 from utils import theme_dict, rmb_table_dict, token_table_dict, ip2int, int2ip, get_sha256_hash
 import json
+from flask_jwt_extended import (
+    JWTManager, jwt_required, create_access_token
+)
 
 app = Flask(__name__)
 # INSERT  INTO `user`(`uid`,`info`) VALUES (1,'{\"mail\": \"jiangchengyao@gmail.com\", \"name\": \"David\", \"address\": \"Shangahai\"}'),(2,'{\"mail\": \"amy@gmail.com\", \"name\": \"Amy\"}');
 # SELECT uid,json_extract(info,'$.mail') AS 'mail',json_extract(info,'$.name') AS 'name' FROM USER;
+app.config['JWT_SECRET_KEY'] = 'super-secret'  # Change this!
+jwt = JWTManager(app)
 
 
 @app.before_request
@@ -28,6 +33,17 @@ def before_request():
     # print(result.fetchall())
     # conn.close()
     pass
+
+@jwt.expired_token_loader
+def my_expired_token_callback(expired_token):
+    token_type = expired_token['type']
+    # return jsonify({
+    #     'status': 401,
+    #     'sub_status': 42,
+    #     'msg': 'The {} token has expired'.format(token_type)
+    # }), 401
+    error = json.dumps({"error" : "The {} token has expired".format(token_type)})
+    return json_response(error, 401)
 
 
 @app.route("/login", methods = ["POST"])
@@ -71,10 +87,16 @@ def login():
         result = conn.execute("select password from user where username=\"{var1}\";".format(var1=params["username"]))
         user_password = result.fetchone()[0]
 
+        if user_password != params["password"]:
+            error = json.dumps({"error":"password mismatch!"})
+            return json_response(error, 405)
+        
+        expires = datetime.timedelta(days=10)
+        token = create_access_token(params["username"], expires_delta=expires)
 
-
+        return_data = {"token", token}
         conn.close()
-        return json_response()
+        return json_response(return_data, 200)
     except Exception as e:
         conn.close()
         error = json.dumps({"error" : e})
