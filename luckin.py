@@ -7,6 +7,7 @@ import json
 from flask_jwt_extended import (
     JWTManager, jwt_required, create_access_token
 )
+import datetime
 
 app = Flask(__name__)
 # INSERT  INTO `user`(`uid`,`info`) VALUES (1,'{\"mail\": \"jiangchengyao@gmail.com\", \"name\": \"David\", \"address\": \"Shangahai\"}'),(2,'{\"mail\": \"amy@gmail.com\", \"name\": \"Amy\"}');
