@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine
 from utils import json_response, check_3dup, generate_day_theme_list, build_queries_from_dict, transform_into_listofdict
@@ -95,9 +95,10 @@ def login():
         expires = datetime.timedelta(days=10)
         token = create_access_token(params["username"], expires_delta=expires)
 
-        return_data = {"token", token}
+        return_data = {"token": token}
         conn.close()
-        return json_response(return_data, 200)
+        # return json_response(return_data, 200)
+        return jsonify(return_data), 200
     except Exception as e:
         conn.close()
         error = json.dumps({"error" : e})
