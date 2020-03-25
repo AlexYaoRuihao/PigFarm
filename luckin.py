@@ -55,12 +55,13 @@ def login():
         error = json.dumps({"error" : "Missing X-APP-ID!"})
         return json_response(error, 401)
     
-    X_DEVICE_ID = request.headers["X-Device-Id"]
-    if X_DEVICE_ID is None:
+    try:
+        X_DEVICE_ID = request.headers["X-Device-Id"]
+    except:
         error = json.dumps({"error" : "Missing X-DEVICE-ID!"})
         return json_response(error, 401)
     
-    data = request.form
+    data = request.json
     try:
         b = all([data.get("username"), data.get("password")])
     except Exception as e:
@@ -114,17 +115,19 @@ def login():
 @app.route("/register", methods = ["POST"])
 def register():
     print("request.headers",request.headers)
-    X_APP_ID = request.headers["X-App-Id"]
-    if X_APP_ID is None:
+    try:
+        X_APP_ID = request.headers["X-App-Id"]
+    except:
         error = json.dumps({"error" : "Missing X-APP-ID!"})
         return json_response(error, 401)
     
-    X_DEVICE_ID = request.headers["X-Device-Id"]
-    if X_DEVICE_ID is None:
+    try:
+        X_DEVICE_ID = request.headers["X-Device-Id"]
+    except:
         error = json.dumps({"error" : "Missing X-DEVICE-ID!"})
         return json_response(error, 401)
 
-    data = request.form
+    data = request.json
     print("data",data)
     try:
         b = all([data.get("username"), data.get("password"), data.get("phone"), data.get("email"), data.get("WeChatID")])
@@ -180,21 +183,20 @@ def register():
 @app.route("/verification/account", methods = ["POST"])
 # def verification(X_DEVICE_ID = None, X_APP_ID = None):
 def verification():
-    # if X_APP_ID is None:
-    #     error = json.dumps({"error" : "Missing X-APP-ID!"})
-    #     return json_response(error, 401)
-    X_APP_ID = request.headers["X-App-Id"]
-    if X_APP_ID is None:
+    try:
+        X_APP_ID = request.headers["X-App-Id"]
+    except:
         error = json.dumps({"error" : "Missing X-APP-ID!"})
         return json_response(error, 401)
     
-    X_DEVICE_ID = request.headers["X-Device-Id"]
-    if X_DEVICE_ID is None:
+    try:
+        X_DEVICE_ID = request.headers["X-Device-Id"]
+    except:
         error = json.dumps({"error" : "Missing X-DEVICE-ID!"})
         return json_response(error, 401)
 
     
-    data = request.form
+    data = request.json
     try:
         b = all([data.get("user_id_hash"), data.get("username"), data.get("last_login_date"), data.get("current_cash"), data.get("current_token")])
     except Exception as e:
@@ -265,8 +267,9 @@ def items(id = None):
         error = json.dumps({"error" : "Non existing id!"})
         return json_response(error, 400)
 
-    X_APP_ID = request.headers["X-App-Id"]
-    if X_APP_ID is None:
+    try:
+        X_APP_ID = request.headers["X-App-Id"]
+    except:
         error = json.dumps({"error" : "Missing X-APP-ID!"})
         return json_response(error, 401)
 
@@ -313,8 +316,9 @@ def get_items(id1 = None, id2 = None):
         error = json.dumps({"error" : "Non existing id!"})
         return json_response(error, 400)
     
-    X_APP_ID = request.headers["X-App-Id"]
-    if X_APP_ID is None:
+    try:
+        X_APP_ID = request.headers["X-App-Id"]
+    except:
         error = json.dumps({"error" : "Missing X-APP-ID!"})
         return json_response(error, 401)
 
@@ -359,9 +363,9 @@ def get_items_post(id1 = None, id2 = None):
         error = json.dumps({"error" : "Non existing id!"})
         return json_response(error, 400)
     
-
-    X_APP_ID = request.headers["X-App-Id"]
-    if X_APP_ID is None:
+    try:
+        X_APP_ID = request.headers["X-App-Id"]
+    except:
         error = json.dumps({"error" : "Missing X-APP-ID!"})
         return json_response(error, 401)
 
