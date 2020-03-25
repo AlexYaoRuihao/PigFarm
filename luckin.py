@@ -49,8 +49,9 @@ def my_expired_token_callback(expired_token):
 
 @app.route("/login", methods = ["POST"])
 def login():
-    X_APP_ID = request.headers["X-App-Id"]
-    if X_APP_ID is None:
+    try: 
+        X_APP_ID = request.headers["X-App-Id"]
+    except:
         error = json.dumps({"error" : "Missing X-APP-ID!"})
         return json_response(error, 401)
     
@@ -124,6 +125,7 @@ def register():
         return json_response(error, 401)
 
     data = request.form
+    print("data",data)
     try:
         b = all([data.get("username"), data.get("password"), data.get("phone"), data.get("email"), data.get("WeChatID")])
     except Exception as e:
