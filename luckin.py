@@ -1,13 +1,15 @@
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine
-from utils import json_response, check_3dup, generate_day_theme_list, build_queries_from_dict, transform_into_listofdict
+from utils import json_response, check_3dup, generate_day_theme_list, build_queries_from_dict, transform_into_listofdict, build_queries_from_dict_username
 from utils import theme_dict, rmb_table_dict, token_table_dict, ip2int, int2ip, get_sha256_hash
 import json
 from flask_jwt_extended import (
     JWTManager, jwt_required, create_access_token
 )
 import datetime
+
+from apscheduler.schedulers.background import BackgroundScheduler
 
 app = Flask(__name__)
 # INSERT  INTO `user`(`uid`,`info`) VALUES (1,'{\"mail\": \"jiangchengyao@gmail.com\", \"name\": \"David\", \"address\": \"Shangahai\"}'),(2,'{\"mail\": \"amy@gmail.com\", \"name\": \"Amy\"}');
@@ -46,6 +48,44 @@ def my_expired_token_callback(expired_token):
     error = json.dumps({"error" : "The {} token has expired".format(token_type)})
     return json_response(error, 401)
 
+@jwt.invalid_token_loader
+def my_invalid_token_callback(invalid_token):
+    token_type = invalid_token['type']
+    error = json.dumps({"error" : "The {} token is invalid".format(token_type)})
+    return json_response(error, 403)
+
+
+
+# Background scheduler task
+def refresh_theme_list():
+    # get all users
+    try:
+        HOSTNAME = "rm-uf6ktwa39f10394a7no.mysql.rds.aliyuncs.com"
+        PORT = "3306"
+        DATABASE = "pigfarmdb"
+        USERNAME = "myadmin"
+        PASSWORD = "GGhavefun123"
+
+        DB_URI = "mysql+pymysql://{username}:{password}@{host}:{port}/{db}?charset=utf8".\
+        format(username=USERNAME,password=PASSWORD,host=HOSTNAME,port=PORT,db=DATABASE)
+
+        engine = create_engine(DB_URI)
+        conn = engine.connect()
+
+        result = conn.execute("select user_id from user;")
+        user_row_list = result.fetchall()
+        for each_user in user_row_list:
+            day_theme_list = generate_day_theme_list()
+            query = build_queries_from_dict(each_user[0], day_theme_list, "UPDATE")
+            conn.execute(query)
+        conn.close()
+    except Exception as e:
+        print(e)
+        conn.close()
+
+
+
+
 
 @app.route("/login", methods = ["POST"])
 def login():
@@ -53,13 +93,13 @@ def login():
         X_APP_ID = request.headers["X-App-Id"]
     except:
         error = json.dumps({"error" : "Missing X-APP-ID!"})
-        return json_response(error, 401)
+        return json_response(error, 403)
     
     try:
         X_DEVICE_ID = request.headers["X-Device-Id"]
     except:
         error = json.dumps({"error" : "Missing X-DEVICE-ID!"})
-        return json_response(error, 401)
+        return json_response(error, 403)
     
     data = request.json
     try:
@@ -97,6 +137,8 @@ def login():
         expires = datetime.timedelta(days=10)
         token = create_access_token(params["username"], expires_delta=expires)
 
+        conn.execute("update user set user_id_hash = \"{var2}\" where username = \"{var3}\";".format(var2=token, var3=params["username"]))
+
         return_data = {"token": token}
         conn.close()
         # return json_response(return_data, 200)
@@ -104,7 +146,7 @@ def login():
     except Exception as e:
         conn.close()
         error = json.dumps({"error" : e})
-        return json_response(error, 403)
+        return json_response(error, 406)
 
 
 
@@ -119,13 +161,13 @@ def register():
         X_APP_ID = request.headers["X-App-Id"]
     except:
         error = json.dumps({"error" : "Missing X-APP-ID!"})
-        return json_response(error, 401)
+        return json_response(error, 403)
     
     try:
         X_DEVICE_ID = request.headers["X-Device-Id"]
     except:
         error = json.dumps({"error" : "Missing X-DEVICE-ID!"})
-        return json_response(error, 401)
+        return json_response(error, 403)
 
     data = request.json
     print("data",data)
@@ -134,7 +176,7 @@ def register():
     except Exception as e:
         # print(e)
         error = json.dumps({"error" : "HTTPS request body imcomplete!"})
-        return json_response(error, 402)
+        return json_response(error, 400)
 
     params = {
         "username": data["username"],
@@ -163,12 +205,16 @@ def register():
         conn.execute("insert into user(username, password, email, phone, WeChatID, registered_IP) VALUES(\"{username}\", \"{password}\", \"{email}\", {phone}, \"{WeChatID}\", {registered_IP});"\
             .format(username=params["username"], password=params["password"], email=params["email"], phone=params["phone"], WeChatID=params["WeChatID"], registered_IP=IP_addr_int))
 
-        result = conn.execute("select user_id from user where username=\"{var1}\";".format(var1=params["username"]))
-        user_id = result.fetchone()[0]
+        # result = conn.execute("select user_id from user where username=\"{var1}\";".format(var1=params["username"]))
+        # user_id = result.fetchone()[0]
 
-        user_id_hash = get_sha256_hash(str(user_id))
+        # user_id_hash = get_sha256_hash(str(user_id))
 
-        conn.execute("update user set user_id_hash = \"{var2}\" where username = \"{var3}\";".format(var2=user_id_hash, var3=params["username"]))
+        # conn.execute("update user set user_id_hash = \"{var2}\" where username = \"{var3}\";".format(var2=user_id_hash, var3=params["username"]))
+
+        day_theme_list = generate_day_theme_list()
+        query = build_queries_from_dict_username(params["username"], day_theme_list, "UPDATE")
+        conn.execute(query)
 
         conn.close()
         return json_response()
@@ -181,19 +227,20 @@ def register():
 
 # check validity of account token
 @app.route("/verification/account", methods = ["POST"])
+@jwt_required
 # def verification(X_DEVICE_ID = None, X_APP_ID = None):
 def verification():
     try:
         X_APP_ID = request.headers["X-App-Id"]
     except:
         error = json.dumps({"error" : "Missing X-APP-ID!"})
-        return json_response(error, 401)
+        return json_response(error, 403)
     
     try:
         X_DEVICE_ID = request.headers["X-Device-Id"]
     except:
         error = json.dumps({"error" : "Missing X-DEVICE-ID!"})
-        return json_response(error, 401)
+        return json_response(error, 403)
 
     
     data = request.json
@@ -232,6 +279,9 @@ def verification():
         if ground_truth_list[0][0] != params["username"]:
             error = json.dumps({"error" : "username mismatch!"})
             return json_response(error, 403)
+        if (str(ground_truth_list[0][1]) != params["current_cash"]) and (str(ground_truth_list[0][2]) != params["current_token"]):
+            error = json.dumps({"error" : "current_cash and current_token mismatch!"})
+            return json_response(error, 403)
         if str(ground_truth_list[0][1]) != params["current_cash"]:
             error = json.dumps({"error" : "current_cash mismatch!"})
             return json_response(error, 403)
@@ -243,16 +293,23 @@ def verification():
         result = conn.execute("select timestampdiff(second, user.last_login_date, CURRENT_TIMESTAMP) from user where user_id_hash=\"{user_id_hash}\";".format(user_id_hash=params["user_id_hash"]))
         timediff = result.fetchall()
         timediff = timediff[0][0]
-        print("type(timediff)",type(timediff))
+        # print("type(timediff)",type(timediff))
         if timediff > 86400: # exceed one day
             result = conn.execute("update user set last_login_date = CURRENT_TIMESTAMP where user_id_hash=\"{user_id_hash}\";".format(user_id_hash=params["user_id_hash"]))
+
+            expires = datetime.timedelta(days=10)
+            token = create_access_token(params["username"], expires_delta=expires)
+
+            conn.execute("update user set user_id_hash = \"{var2}\" where username = \"{var3}\";".format(var2=token, var3=params["username"]))
+
         else: # doesn't exceed one day
             pass
-        current_last_login_date = conn.execute("select last_login_date from user where user_id_hash=\"{user_id_hash}\";".format(user_id_hash=params["user_id_hash"]))
-        # print("fefeffefe",current_last_login_date[0])
-        current_last_login_date = current_last_login_date.fetchall()[0][0]
+        # current_last_login_date = conn.execute("select last_login_date from user where user_id_hash=\"{user_id_hash}\";".format(user_id_hash=params["user_id_hash"]))
+        # current_last_login_date = current_last_login_date.fetchall()[0][0]
+        result = conn.execute("select user_id_hash from user where username=\"{username}\";".format(username=params["username"]))
+        account_token = result.fetchone()[0]
         conn.close()
-        return json_response(json.dumps({"user_id_hash" : params["user_id_hash"], "last_login_date" : str(current_last_login_date)}), 200)
+        return json_response(json.dumps({"account" : account_token}), 200)
     except Exception as e:
         conn.close()
         error = json.dumps({"error" : e})
@@ -262,6 +319,7 @@ def verification():
 
 # 
 @app.route("/items/<string:id>")
+@jwt_required
 def items(id = None):
     if id is None:
         error = json.dumps({"error" : "Non existing id!"})
@@ -308,6 +366,7 @@ def items(id = None):
 
 
 @app.route("/items/<string:id1>/item/<string:id2>")
+@jwt_required
 def get_items(id1 = None, id2 = None):
     if id1 is None:
         error = json.dumps({"error" : "Non existing id!"})
@@ -355,6 +414,7 @@ def get_items(id1 = None, id2 = None):
 
 
 @app.route("/items/<string:id1>/item/<string:id2>", methods = ["POST"])
+@jwt_required
 def get_items_post(id1 = None, id2 = None):
     if id1 is None:
         error = json.dumps({"error" : "Non existing id!"})
@@ -425,8 +485,14 @@ def get_items_post(id1 = None, id2 = None):
 
 
 
-
+sched = BackgroundScheduler(daemon=True)
+# sched.add_job(refresh_theme_list,'cron',minute='*')
+sched.add_job(refresh_theme_list, 'interval', days=1, start_date="2020-4-15 00:00:00")
+sched.start()
     
 if __name__ == "__main__":
+    # sched = BackgroundScheduler(daemon=True)
+    # sched.add_job(refresh_theme_list,'cron',minute='*')
+    # sched.start()
     app.debug = True
     app.run(host="0.0.0.0", port="8080", ssl_context = ("SSL_Certificate.key","SSL_Certificate.pem"))

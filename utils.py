@@ -112,10 +112,11 @@ def get_sha256_hash(s):
 
 
 # update user set `day_theme_list` = '{\"0\": \"Airport\", \"1\": \"Bus_Stop\", \"2\": \"Casino\"}' where `user_id` = 1;
-def build_queries_from_dict(user_id_hash, d, query_type):
+def build_queries_from_dict(user_id, d, query_type):
     if query_type == "SELECT":
-        query = "select user_id_hash, day_theme_list from user where user_id_hash=\"{user_id_hash}\";".format(user_id_hash = user_id_hash)
-        return query
+        # query = "select user_id_hash, day_theme_list from user where user_id_hash=\"{user_id_hash}\";".format(user_id_hash = user_id_hash)
+        # return query
+        pass
     elif query_type == "INSERT":
         # json_theme_list = []
         # for k, v in d.items():
@@ -130,7 +131,7 @@ def build_queries_from_dict(user_id_hash, d, query_type):
             json_theme_list.append("\"" + str(k) + "\"" + " : " + "\"" + str(v) + "\"")
             # json_theme_list.append(str(k) + ":" + str(v))
         json_theme_list_query = ",".join(json_theme_list)
-        query = "update user set day_theme_list = '{" + json_theme_list_query + "}'" + "where user_id_hash=\"{user_id_hash}\";".format(user_id_hash = user_id_hash)
+        query = "update user set day_theme_list = '{" + json_theme_list_query + "}'" + "where user_id=\"{user_id}\";".format(user_id = user_id)
         return query
     else:
         raise ValueError("{query_type} not implemented!".format(query_type=query_type))
