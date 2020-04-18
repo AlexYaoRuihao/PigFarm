@@ -137,7 +137,7 @@ def login():
         expires = datetime.timedelta(days=10)
         token = create_access_token(params["username"], expires_delta=expires)
 
-        conn.execute("update user set user_id_hash = \"{var2}\" where username = \"{var3}\";".format(var2=token, var3=params["username"]))
+        # conn.execute("update user set user_id_hash = \"{var2}\" where username = \"{var3}\";".format(var2=token, var3=params["username"]))
 
         return_data = {"token": token}
         conn.close()
@@ -360,7 +360,7 @@ def items(id = None):
         # conn.execute(query)
 
         result = conn.execute("select day_theme_list from user where username=\"{username}\";".format(username = username))
-        day_theme_list = result.fetchone[0]
+        day_theme_list = result.fetchone()[0]
         day_theme_list = json.loads(day_theme_list)
 
         conn.close()
@@ -502,9 +502,9 @@ def get_items_post(id1 = None, id2 = None):
 
 
 
-# sched = BackgroundScheduler(daemon=True)
-# sched.add_job(refresh_theme_list, 'interval', days=1, start_date="2020-4-15 00:00:00")
-# sched.start()
+sched = BackgroundScheduler(daemon=True)
+sched.add_job(refresh_theme_list, 'interval', days=1, start_date="2020-4-15 00:00:00")
+sched.start()
     
 if __name__ == "__main__":
     # sched = BackgroundScheduler(daemon=True)
