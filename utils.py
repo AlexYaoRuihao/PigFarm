@@ -136,6 +136,31 @@ def build_queries_from_dict(user_id, d, query_type):
     else:
         raise ValueError("{query_type} not implemented!".format(query_type=query_type))
 
+def build_queries_from_dict_username(username, d, query_type):
+    if query_type == "SELECT":
+        # query = "select user_id_hash, day_theme_list from user where user_id_hash=\"{user_id_hash}\";".format(user_id_hash = user_id_hash)
+        # return query
+        pass
+    elif query_type == "INSERT":
+        # json_theme_list = []
+        # for k, v in d.items():
+        #     json_theme_list.append("\\\"" + k + "\\\"" + " : " + "\\\"" + v + "\\\"")
+        # json_theme_list_query = ",".join(json_theme_list)
+        # query = "insert into user day_theme_list = '{" + json_theme_list_query + "}' " + "where user_id_hash={user_id_hash}".format(user_id_hash = user_id_hash)
+        # return query
+        pass
+    elif query_type == "UPDATE":
+        json_theme_list = []
+        for k, v in d.items():
+            json_theme_list.append("\"" + str(k) + "\"" + " : " + "\"" + str(v) + "\"")
+            # json_theme_list.append(str(k) + ":" + str(v))
+        json_theme_list_query = ",".join(json_theme_list)
+        query = "update user set day_theme_list = '{" + json_theme_list_query + "}'" + "where username=\"{username}\";".format(username = username)
+        return query
+    else:
+        raise ValueError("{query_type} not implemented!".format(query_type=query_type))
+
+
 def generate_day_theme_list(day_theme_num=25):
     day_theme_list = {}
     HOSTNAME = "rm-uf6ktwa39f10394a7no.mysql.rds.aliyuncs.com"

@@ -5,7 +5,7 @@ from utils import json_response, check_3dup, generate_day_theme_list, build_quer
 from utils import theme_dict, rmb_table_dict, token_table_dict, ip2int, int2ip, get_sha256_hash
 import json
 from flask_jwt_extended import (
-    JWTManager, jwt_required, create_access_token
+    JWTManager, jwt_required, create_access_token, get_jwt_identity
 )
 import datetime
 
@@ -52,7 +52,7 @@ def my_expired_token_callback(expired_token):
 def my_invalid_token_callback(invalid_token):
     token_type = invalid_token['type']
     error = json.dumps({"error" : "The {} token is invalid".format(token_type)})
-    return json_response(error, 403)
+    return json_response(error, 404)
 
 
 
@@ -245,7 +245,7 @@ def verification():
     
     data = request.json
     try:
-        b = all([data.get("user_id_hash"), data.get("username"), data.get("last_login_date"), data.get("current_cash"), data.get("current_token")])
+        b = all([data.get("current_cash"), data.get("current_token")])
     except Exception as e:
         # print(e)
         error = json.dumps({"error" : "HTTPS request body imcomplete!"})
@@ -253,9 +253,9 @@ def verification():
     
     # print("user_id_hash", data["user_id_hash"])
     params = {
-        "user_id_hash": data["user_id_hash"],
-        "username": data["username"],
-        "last_login_date": data["last_login_date"],
+        # "user_id_hash": data["token"],
+        # "username": data["username"],
+        # "last_login_date": data["last_login_date"],
         "current_cash": data["current_cash"],
         "current_token": data["current_token"]
     }
@@ -272,44 +272,48 @@ def verification():
         engine = create_engine(DB_URI)
         conn = engine.connect()
 
+        username = get_jwt_identity()
+
         # ground_truth_list = []
         # print("select username, current_cash, current_token from user where user_id_hash={user_id_hash};".format(user_id_hash=params["user_id_hash"]))
-        result = conn.execute("select username, current_cash, current_token from user where user_id_hash=\"{user_id_hash}\";".format(user_id_hash=params["user_id_hash"]))
+        result = conn.execute("select current_cash, current_token from user where username=\"{username}\";".format(username=username))
         ground_truth_list = result.fetchall()
-        if ground_truth_list[0][0] != params["username"]:
-            error = json.dumps({"error" : "username mismatch!"})
-            return json_response(error, 403)
-        if (str(ground_truth_list[0][1]) != params["current_cash"]) and (str(ground_truth_list[0][2]) != params["current_token"]):
+        # if ground_truth_list[0][0] != username:
+        #     error = json.dumps({"error" : "username mismatch!"})
+        #     return json_response(error, 403)
+        if (str(ground_truth_list[0][0]) != params["current_cash"]) and (str(ground_truth_list[0][1]) != params["current_token"]):
             error = json.dumps({"error" : "current_cash and current_token mismatch!"})
             return json_response(error, 403)
-        if str(ground_truth_list[0][1]) != params["current_cash"]:
+        if str(ground_truth_list[0][0]) != params["current_cash"]:
             error = json.dumps({"error" : "current_cash mismatch!"})
             return json_response(error, 403)
-        if str(ground_truth_list[0][2]) != params["current_token"]:
+        if str(ground_truth_list[0][1]) != params["current_token"]:
             error = json.dumps({"error" : "current_token mismatch!"})
             return json_response(error, 403)
 
         # then perform updates on last_login_date
-        result = conn.execute("select timestampdiff(second, user.last_login_date, CURRENT_TIMESTAMP) from user where user_id_hash=\"{user_id_hash}\";".format(user_id_hash=params["user_id_hash"]))
+        result = conn.execute("select timestampdiff(second, user.last_login_date, CURRENT_TIMESTAMP) from user where username=\"{username}\";".format(username=username))
         timediff = result.fetchall()
         timediff = timediff[0][0]
         # print("type(timediff)",type(timediff))
         if timediff > 86400: # exceed one day
-            result = conn.execute("update user set last_login_date = CURRENT_TIMESTAMP where user_id_hash=\"{user_id_hash}\";".format(user_id_hash=params["user_id_hash"]))
+            result = conn.execute("update user set last_login_date = CURRENT_TIMESTAMP where username=\"{username}\";".format(username=username))
 
             expires = datetime.timedelta(days=10)
-            token = create_access_token(params["username"], expires_delta=expires)
+            token = create_access_token(username, expires_delta=expires)
 
-            conn.execute("update user set user_id_hash = \"{var2}\" where username = \"{var3}\";".format(var2=token, var3=params["username"]))
+            # conn.execute("update user set user_id_hash = \"{var2}\" where username = \"{var3}\";".format(var2=token, var3=params["username"]))
 
         else: # doesn't exceed one day
+            token = request.headers["authorization"]
+            token = token.split()[1]
             pass
         # current_last_login_date = conn.execute("select last_login_date from user where user_id_hash=\"{user_id_hash}\";".format(user_id_hash=params["user_id_hash"]))
         # current_last_login_date = current_last_login_date.fetchall()[0][0]
-        result = conn.execute("select user_id_hash from user where username=\"{username}\";".format(username=params["username"]))
-        account_token = result.fetchone()[0]
+        # result = conn.execute("select user_id_hash from user where username=\"{username}\";".format(username=params["username"]))
+        # account_token = result.fetchone()[0]
         conn.close()
-        return json_response(json.dumps({"account" : account_token}), 200)
+        return json_response(json.dumps({"account" : token}), 200)
     except Exception as e:
         conn.close()
         error = json.dumps({"error" : e})
@@ -347,11 +351,18 @@ def items(id = None):
         engine = create_engine(DB_URI)
         conn = engine.connect()
 
+        username = get_jwt_identity()
+
         # result = conn.execute("select user_id_hash, current_cash, current_token from user where user_id_hash={user_id_hash};".format(user_id_hash=str(id)))
-        day_theme_list = generate_day_theme_list()
-        query = build_queries_from_dict(id, day_theme_list, "UPDATE")
+        # day_theme_list = generate_day_theme_list()
+        # query = build_queries_from_dict(id, day_theme_list, "UPDATE")
         #perform updates on user's day_theme_list field
-        conn.execute(query)
+        # conn.execute(query)
+
+        result = conn.execute("select day_theme_list from user where username=\"{username}\";".format(username = username))
+        day_theme_list = result.fetchone[0]
+        day_theme_list = json.loads(day_theme_list)
+
         conn.close()
 
         return json_response(json.dumps(transform_into_listofdict(day_theme_list)), 200)
@@ -370,16 +381,16 @@ def items(id = None):
 def get_items(id1 = None, id2 = None):
     if id1 is None:
         error = json.dumps({"error" : "Non existing id!"})
-        return json_response(error, 400)
+        return json_response(error, 403)
     if id2 is None:
         error = json.dumps({"error" : "Non existing id!"})
-        return json_response(error, 400)
+        return json_response(error, 403)
     
     try:
         X_APP_ID = request.headers["X-App-Id"]
     except:
         error = json.dumps({"error" : "Missing X-APP-ID!"})
-        return json_response(error, 401)
+        return json_response(error, 403)
 
     try:
         return_dict = {}
@@ -396,7 +407,10 @@ def get_items(id1 = None, id2 = None):
 
         engine = create_engine(DB_URI)
         conn = engine.connect()
-        result = conn.execute("select user_id, day_theme_list from user where user_id_hash=\"{user_id_hash}\";".format(user_id_hash = id1_str))
+
+        username = get_jwt_identity()
+
+        result = conn.execute("select user_id, day_theme_list from user where username=\"{username}\";".format(username = username))
         day_theme_dict = json.loads(result.fetchall()[0][1])
         encoded_str = day_theme_dict[id2_str]
         encoded_str_list = encoded_str.split("|")
@@ -443,7 +457,10 @@ def get_items_post(id1 = None, id2 = None):
 
         engine = create_engine(DB_URI)
         conn = engine.connect()
-        result = conn.execute("select day_theme_list from user where user_id_hash = \"{user_id_hash}\";".format(user_id_hash=id1_str))
+
+        username = get_jwt_identity()
+
+        result = conn.execute("select day_theme_list from user where username = \"{username}\";".format(username=username))
 
         day_theme_list = result.fetchall()[0][0]
         day_theme_list_dict = json.loads(day_theme_list)
@@ -462,7 +479,7 @@ def get_items_post(id1 = None, id2 = None):
 
         day_theme_list_dict.pop(id2_str)
         day_theme_list_dict_str = json.dumps(day_theme_list_dict)
-        conn.execute("update user set day_theme_list = '{var1}' where user_id_hash=\"{user_id_hash}\";".format(var1=day_theme_list_dict_str, user_id_hash=id1_str))
+        conn.execute("update user set day_theme_list = '{var1}' where username=\"{username}\";".format(var1=day_theme_list_dict_str, username=username))
         if three_dup == False:
             # day_theme_list_dict.pop(id2_str)
             # day_theme_list_dict_str = json.dumps(day_theme_list_dict)
@@ -470,12 +487,12 @@ def get_items_post(id1 = None, id2 = None):
             pass
         else: # True
             if rmb_or_token == "r":
-                conn.execute("update user set current_cash = current_cash + {var2} where user_id_hash=\"{user_id_hash}\";".format(var2=reward, user_id_hash=id1_str))
+                conn.execute("update user set current_cash = current_cash + {var2} where username=\"{username}\";".format(var2=reward, username=username))
             else:
-                conn.execute("update user set current_token = current_token + {var2} where user_id_hash=\"{user_id_hash}\";".format(var2=reward, user_id_hash=id1_str))
+                conn.execute("update user set current_token = current_token + {var2} where username=\"{username}\";".format(var2=reward, username=username))
 
         # update extra tokens
-        conn.execute("update user set current_token = current_token + {var3} where user_id_hash=\"{user_id_hash}\";".format(var3=extra_tokens, user_id_hash=id1_str))
+        conn.execute("update user set current_token = current_token + {var3} where username=\"{username}\";".format(var3=extra_tokens, username=username))
         conn.close()
         return json_response()
     except Exception as e:
@@ -485,10 +502,9 @@ def get_items_post(id1 = None, id2 = None):
 
 
 
-sched = BackgroundScheduler(daemon=True)
-# sched.add_job(refresh_theme_list,'cron',minute='*')
-sched.add_job(refresh_theme_list, 'interval', days=1, start_date="2020-4-15 00:00:00")
-sched.start()
+# sched = BackgroundScheduler(daemon=True)
+# sched.add_job(refresh_theme_list, 'interval', days=1, start_date="2020-4-15 00:00:00")
+# sched.start()
     
 if __name__ == "__main__":
     # sched = BackgroundScheduler(daemon=True)
