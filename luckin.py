@@ -127,19 +127,32 @@ def login():
         engine = create_engine(DB_URI)
         conn = engine.connect()
 
-        result = conn.execute("select password from user where username=\"{var1}\";".format(var1=params["username"]))
-        user_password = result.fetchone()[0]
+        try: 
+            result = conn.execute("select password from user where username=\"{var1}\";".format(var1=params["username"]))
+            user_password = result.fetchone()[0]
+        except Exception as e:
+            conn.close()
+            error = json.dumps({"error":"invalid username"})
+            return json_response(error, 401)
 
         if user_password != params["password"]:
             error = json.dumps({"error":"password mismatch!"})
-            return json_response(error, 405)
+            return json_response(error, 401)
         
         expires = datetime.timedelta(days=10)
         token = create_access_token(params["username"], expires_delta=expires)
 
         # conn.execute("update user set user_id_hash = \"{var2}\" where username = \"{var3}\";".format(var2=token, var3=params["username"]))
 
-        return_data = {"token": token}
+        try:
+            result = conn.execute("select user_id, current_cash, current_token from user where username=\"{var1}\";".format(var1=params["username"]))
+            l = result.fetchone()
+        except Exception as e:
+            conn.close()
+            error = json.dumps({"error" : e})
+            return json_response(error, 406)
+
+        return_data = {"account":l[0], "account_token": token, "token": l[2], "cash": l[1]}
         conn.close()
         # return json_response(return_data, 200)
         return jsonify(return_data), 200
@@ -312,8 +325,18 @@ def verification():
         # current_last_login_date = current_last_login_date.fetchall()[0][0]
         # result = conn.execute("select user_id_hash from user where username=\"{username}\";".format(username=params["username"]))
         # account_token = result.fetchone()[0]
+
+        try:
+            result = conn.execute("select user_id, current_cash, current_token from user where username=\"{var1}\";".format(var1=username))
+            l = result.fetchone()
+        except Exception as e:
+            conn.close()
+            error = json.dumps({"error" : e})
+            return json_response(error, 406)
+
+
         conn.close()
-        return json_response(json.dumps({"account" : token}), 200)
+        return json_response(json.dumps({"account" : l[0], "account_token" : token, "token" : l[2], "cash" : l[1]}), 200)
     except Exception as e:
         conn.close()
         error = json.dumps({"error" : e})
@@ -322,18 +345,18 @@ def verification():
 
 
 # 
-@app.route("/items/<string:id>")
+@app.route("/items")
 @jwt_required
-def items(id = None):
-    if id is None:
-        error = json.dumps({"error" : "Non existing id!"})
-        return json_response(error, 400)
+def items():
+    # if id is None:
+    #     error = json.dumps({"error" : "Non existing id!"})
+    #     return json_response(error, 400)
 
     try:
         X_APP_ID = request.headers["X-App-Id"]
     except:
         error = json.dumps({"error" : "Missing X-APP-ID!"})
-        return json_response(error, 401)
+        return json_response(error, 403)
 
     
     # pre-calculate a day's profits if possible
@@ -376,14 +399,14 @@ def items(id = None):
         return json_response(error, 403)
 
 
-@app.route("/items/<string:id1>/item/<string:id2>")
+@app.route("/items/item/<string:id>")
 @jwt_required
-def get_items(id1 = None, id2 = None):
-    if id1 is None:
-        error = json.dumps({"error" : "Non existing id!"})
-        return json_response(error, 403)
-    if id2 is None:
-        error = json.dumps({"error" : "Non existing id!"})
+def get_items(id = None):
+    # if id1 is None:
+    #     error = json.dumps({"error" : "Non existing id!"})
+    #     return json_response(error, 403)
+    if id is None:
+        error = json.dumps({"error" : "Missing item ID"})
         return json_response(error, 403)
     
     try:
@@ -394,8 +417,8 @@ def get_items(id1 = None, id2 = None):
 
     try:
         return_dict = {}
-        id1_str = str(id1)
-        id2_str = str(id2)
+        # id1_str = str(id1)
+        id2_str = str(id)
         HOSTNAME = "rm-uf6ktwa39f10394a7no.mysql.rds.aliyuncs.com"
         PORT = "3306"
         DATABASE = "pigfarmdb"
@@ -427,14 +450,14 @@ def get_items(id1 = None, id2 = None):
         return json_response(error, 403)
 
 
-@app.route("/items/<string:id1>/item/<string:id2>", methods = ["POST"])
+@app.route("/items/item/<string:id>", methods = ["POST"])
 @jwt_required
-def get_items_post(id1 = None, id2 = None):
-    if id1 is None:
-        error = json.dumps({"error" : "Non existing id!"})
-        return json_response(error, 400)
-    if id2 is None:
-        error = json.dumps({"error" : "Non existing id!"})
+def get_items_post(id = None):
+    # if id1 is None:
+    #     error = json.dumps({"error" : "Non existing id!"})
+    #     return json_response(error, 400)
+    if id is None:
+        error = json.dumps({"error" : "Missing item ID"})
         return json_response(error, 400)
     
     try:
@@ -444,8 +467,8 @@ def get_items_post(id1 = None, id2 = None):
         return json_response(error, 401)
 
     try:
-        id1_str = str(id1)
-        id2_str = str(id2)
+        # id1_str = str(id1)
+        id2_str = str(id)
         HOSTNAME = "rm-uf6ktwa39f10394a7no.mysql.rds.aliyuncs.com"
         PORT = "3306"
         DATABASE = "pigfarmdb"

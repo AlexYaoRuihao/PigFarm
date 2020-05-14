@@ -211,7 +211,7 @@ def transform_into_listofdict(d):
         temp_dict = {}
         decoded_data = v.split("|")
         temp_dict["theme"] = theme_dict[int(decoded_data[0])]
-        temp_dict["pattern"] = decoded_data[3]
+        temp_dict["id"] = decoded_data[3]
         day_theme_list_of_dict.append(temp_dict)
     return day_theme_list_of_dict
 
