@@ -152,7 +152,7 @@ def login():
             error = json.dumps({"error" : e})
             return json_response(error, 406)
 
-        return_data = {"account":l[0], "account_token": token, "token": l[2], "cash": l[1]}
+        return_data = {"account_token": token, "token": l[2], "cash": l[1]}
         conn.close()
         # return json_response(return_data, 200)
         return jsonify(return_data), 200
@@ -336,7 +336,7 @@ def verification():
 
 
         conn.close()
-        return json_response(json.dumps({"account" : l[0], "account_token" : token, "token" : l[2], "cash" : l[1]}), 200)
+        return json_response(json.dumps({"account_token" : token, "token" : l[2], "cash" : l[1]}), 200)
     except Exception as e:
         conn.close()
         error = json.dumps({"error" : e})
