@@ -206,6 +206,7 @@ def generate_day_theme_list(day_theme_num=25):
     return day_theme_list
 
 def transform_into_listofdict(d):
+    # "11|t|5|002321|2200"
     day_theme_list_of_dict = []
     for k, v in d.items():
         temp_dict = {}
@@ -213,6 +214,14 @@ def transform_into_listofdict(d):
         temp_dict["theme"] = theme_dict[int(decoded_data[0])]
         # temp_dict["id"] = decoded_data[3]
         temp_dict["id"] = k
+
+        if decoded_data[1] == "t":
+            temp_dict["isToken"] = 1
+            temp_dict["reward"] = token_table_dict[int(decoded_data[2])]
+        else:
+            temp_dict["isToken"] = 0
+            temp_dict["reward"] = rmb_table_dict[int(decoded_data[2])]
+        
         day_theme_list_of_dict.append(temp_dict)
     return day_theme_list_of_dict
 

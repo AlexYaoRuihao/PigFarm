@@ -440,6 +440,19 @@ def get_items(id = None):
         return_dict["bonus"] = int(encoded_str_list[4])
         return_dict["order"] = [int(encoded_str_list[3][0]), int(encoded_str_list[3][1]), int(encoded_str_list[3][2]), int(encoded_str_list[3][3]), int(encoded_str_list[3][4]), int(encoded_str_list[3][5])]
 
+        if encoded_str_list[1] == "t":
+            return_dict["isToken"] = 1
+            if check_3dup(encoded_str_list[3]):
+                return_dict["reward"] = token_table_dict[int(encoded_str_list[2])]
+            else:
+                return_dict["reward"] = 0
+        else:
+            return_dict["isToken"] = 0
+            if check_3dup(encoded_str_list[3]):
+                return_dict["reward"] = rmb_table_dict[int(encoded_str_list[2])]
+            else:
+                return_dict["reward"] = 0
+
         conn.close()
         return json_response(json.dumps(return_dict), 200)
 
