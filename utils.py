@@ -66,9 +66,9 @@ rmb_table_dict = {
             10: 888,
             11: 1314,
             12: 6324,
-            13: 8888,
-            14: 13999,
-            15: 88888
+            13: 8888
+            # 14: 13999,
+            # 15: 88888
 }
 
 token_table_dict = {
@@ -182,7 +182,7 @@ def generate_day_theme_list(day_theme_num=25):
             day_theme_idx_hash = get_sha256_hash(str(day_theme_idx))
             theme_num = random.randint(1,25)
             cash_or_token = "r"
-            table_num = random.randint(1,15)
+            table_num = random.randint(1,13)
             # get pattern
             table_name = "rmb"+str(rmb_table_dict[table_num])+"table"
             result = conn.execute("select pattern from {table_name} ORDER BY RAND() LIMIT 1;".format(table_name=table_name))
